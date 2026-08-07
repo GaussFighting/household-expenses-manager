@@ -16,10 +16,15 @@ phases:
             npm run lint
             ;;
           test)
-            npm test 
+            npm test
             ;;
           *)
             echo "Unknown BUILD_ACTION: $BUILD_ACTION"
             exit 1
             ;;
         esac
+
+artifacts:
+  files:
+    - '**/*'
+  base-directory: build
