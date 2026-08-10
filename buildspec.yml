@@ -1,5 +1,9 @@
 version: 0.2
 
+env:
+  parameter-store:
+    API_KEY: /${CODE_PIPELINE_NAME}/API_KEY
+
 phases:
   install:
     commands:
@@ -7,6 +11,7 @@ phases:
 
   build:
     commands:
+      - test -n "$API_KEY" && echo "API_KEY is set"
       - chmod +x scripts/build.sh
       - ./scripts/build.sh
 
