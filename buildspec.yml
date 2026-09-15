@@ -15,6 +15,11 @@ phases:
           cd lambdas/login
           npm ci
           cd ../..
+
+          cd lambdas/authoriser
+          npm ci
+          cd ../..
+
         else
           echo "Skipping Lambda dependencies"
         fi
@@ -37,7 +42,19 @@ phases:
             --region eu-central-1
 
           cd ../..
+
           echo "Login Lambda deployment completed"
+
+          cd lambdas/authoriser
+          zip -r authoriser.zip index.js package.json package-lock.json node_modules
+          aws lambda update-function-code \
+            --function-name authoriser \
+            --zip-file fileb://authoriser.zip \
+            --region eu-central-1
+
+          cd ../..
+
+          echo "Authoriser Lambda deployment completed"
         else
           echo "Environment: production"
           echo "Skipping Lambda deployment"
