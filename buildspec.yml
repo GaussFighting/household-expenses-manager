@@ -8,17 +8,40 @@ phases:
   install:
     commands:
       - npm install
-      - cd lambdas/login && npm ci && cd ../..
+
+      - |
+        if [ "$CODE_PIPELINE_NAME" = "expenses-manager-develop" ]; then
+          echo "Installing Lambda dependencies..."
+          cd lambdas/login
+          npm ci
+          cd ../..
+        else
+          echo "Skipping Lambda dependencies"
+        fi
 
   build:
     commands:
       - test -n "$API_KEY" && echo "API_KEY is set"
       - npm run build
 
-      - cd lambdas/login
-      - zip -r login.zip index.js package.json node_modules
-      - "aws lambda update-function-code --function-name login --zip-file fileb://login.zip --region eu-central-1"
-      - cd ../..
+      - |
+        if [ "$CODE_PIPELINE_NAME" = "expenses-manager-develop" ]; then
+          echo "Environment: develop"
+          echo "Deploying login Lambda..."
+
+          cd lambdas/login
+          zip -r login.zip index.js package.json node_modules
+          aws lambda update-function-code \
+            --function-name login \
+            --zip-file fileb://login.zip \
+            --region eu-central-1
+
+          cd ../..
+          echo "Login Lambda deployment completed"
+        else
+          echo "Environment: production"
+          echo "Skipping Lambda deployment"
+        fi
 
 artifacts:
   base-directory: build
