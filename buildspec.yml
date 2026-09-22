@@ -12,6 +12,7 @@ phases:
       - |
         if [ "$CODE_PIPELINE_NAME" = "expenses-manager-develop" ]; then
           echo "Installing Lambda dependencies..."
+
           cd lambdas/login
           npm ci
           cd ../..
@@ -19,7 +20,6 @@ phases:
           cd lambdas/authoriser
           npm ci
           cd ../..
-
         else
           echo "Skipping Lambda dependencies"
         fi
@@ -32,29 +32,46 @@ phases:
       - |
         if [ "$CODE_PIPELINE_NAME" = "expenses-manager-develop" ]; then
           echo "Environment: develop"
-          echo "Deploying login Lambda..."
 
-          cd lambdas/login
-          zip -r login.zip index.js package.json node_modules
-          aws lambda update-function-code \
-            --function-name login \
-            --zip-file fileb://login.zip \
-            --region eu-central-1
+          deploy_lambda() {
+            LAMBDA_NAME=$1
 
-          cd ../..
+            echo "Deploying ${LAMBDA_NAME} Lambda..."
 
-          echo "Login Lambda deployment completed"
+            cd "lambdas/${LAMBDA_NAME}"
 
-          cd lambdas/authoriser
-          zip -r authoriser.zip index.js package.json package-lock.json node_modules
-          aws lambda update-function-code \
-            --function-name authoriser \
-            --zip-file fileb://authoriser.zip \
-            --region eu-central-1
+            if [ -d "node_modules" ]; then
+              zip -r "${LAMBDA_NAME}.zip" index.js package.json package-lock.json node_modules
+            else
+              zip -r "${LAMBDA_NAME}.zip" index.js
+            fi
 
-          cd ../..
+            aws lambda update-function-code \
+              --function-name "${LAMBDA_NAME}" \
+              --zip-file "fileb://${LAMBDA_NAME}.zip" \
+              --region eu-central-1
 
-          echo "Authoriser Lambda deployment completed"
+            cd ../..
+
+            echo "${LAMBDA_NAME} Lambda deployment completed"
+          }
+
+          deploy_lambda ping
+          deploy_lambda getPayment
+          deploy_lambda getPaymentTypes
+          deploy_lambda sumPayments
+          deploy_lambda updatePayment
+          deploy_lambda createPaymentType
+          deploy_lambda deletePaymentType
+          deploy_lambda deletePayment
+          deploy_lambda login
+          deploy_lambda createPayment
+          deploy_lambda getPaymentType
+          deploy_lambda getExtras
+          deploy_lambda authoriser
+          deploy_lambda updatePaymentType
+          deploy_lambda getPayments
+
         else
           echo "Environment: production"
           echo "Skipping Lambda deployment"

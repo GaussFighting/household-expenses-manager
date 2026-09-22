@@ -10,7 +10,6 @@ const cognito = new CognitoIdentityProviderClient({
 
 export const handler = async (event) => {
   try {
-    console.log("LOGIN Lambda version: SECRET_HASH_TEST_1");
     console.log("LOGIN Lambda started");
 
     const body = JSON.parse(event.body || "{}");
@@ -32,6 +31,10 @@ export const handler = async (event) => {
 
       return {
         statusCode: 403,
+        headers: {
+          "Access-Control-Allow-Origin": "http://localhost:3000",
+          "Access-Control-Allow-Credentials": "true",
+        },
         body: JSON.stringify({
           message: "Invalid credentials",
         }),
@@ -66,12 +69,21 @@ export const handler = async (event) => {
     const response = await cognito.send(command);
 
     console.log("Cognito authentication successful");
+    const accessToken = response.AuthenticationResult.AccessToken;
+    const ttl = response.AuthenticationResult.ExpiresIn;
 
     return {
       statusCode: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "http://localhost:3000",
+        "Access-Control-Allow-Credentials": "true",
+        "Set-Cookie": `accessToken=${encodeURIComponent(
+          accessToken,
+        )}; Max-Age=${ttl}; Path=/; HttpOnly; Secure; SameSite=None`,
+      },
       body: JSON.stringify({
-        accessToken: response.AuthenticationResult.AccessToken,
-        ttl: response.AuthenticationResult.ExpiresIn,
+        ttl,
       }),
     };
   } catch (error) {
@@ -81,6 +93,10 @@ export const handler = async (event) => {
 
     return {
       statusCode: 403,
+      headers: {
+        "Access-Control-Allow-Origin": "http://localhost:3000",
+        "Access-Control-Allow-Credentials": "true",
+      },
       body: JSON.stringify({
         message: "Invalid credentials",
       }),

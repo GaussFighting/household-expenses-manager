@@ -21,29 +21,52 @@ export const handler = async (event) => {
   console.log("Authoriser started");
 
   try {
-    const authorizationToken = event.authorizationToken;
+    const headers = event.headers || {};
 
-    if (!authorizationToken) {
-      console.log("Authorization token is missing");
+    const cookieHeader = headers.Cookie || headers.cookie;
+
+    if (!cookieHeader) {
+      console.log("Cookie header is missing");
+      throw new Error("Unauthorized");
+    }
+    console.log("event.headers:", event.headers);
+    console.log("Cookie header received");
+
+    const cookies = cookieHeader.split(";");
+
+    const accessTokenCookie = cookies.find((cookie) => {
+      return cookie.trim().startsWith("accessToken=");
+    });
+
+    if (!accessTokenCookie) {
+      console.log("accessToken cookie is missing");
       throw new Error("Unauthorized");
     }
 
-    const parts = authorizationToken.split(" ");
+    const accessToken = accessTokenCookie
+      .trim()
+      .substring("accessToken=".length);
 
-    if (parts.length !== 2 || parts[0] !== "Bearer") {
-      console.log("Invalid Authorization header format");
+    if (!accessToken) {
+      console.log("accessToken cookie is empty");
       throw new Error("Unauthorized");
     }
-
-    const accessToken = parts[1];
 
     console.log("Verifying Cognito access token...");
 
-    const payload = await verifier.verify(accessToken);
+    const payload = await verifier.verify(decodeURIComponent(accessToken));
+
+    const methodArnParts = event.methodArn.split("/");
+    const apiArn = methodArnParts[0];
+    const stage = methodArnParts[1];
 
     console.log("JWT is valid");
     console.log("Subject:", payload.sub);
+    console.log("Authorizer methodArn:", event.methodArn);
+    console.log("Authorizer principalId:", payload.sub);
+    console.log("Returning Allow policy");
 
+    const resource = `${apiArn}/${stage}/*/*`;
     return {
       principalId: payload.sub,
       policyDocument: {
@@ -52,13 +75,13 @@ export const handler = async (event) => {
           {
             Action: "execute-api:Invoke",
             Effect: "Allow",
-            Resource: event.methodArn,
+            Resource: resource,
           },
         ],
       },
     };
-  } catch (err) {
-    console.error("JWT verification failed:", err.message);
+  } catch (error) {
+    console.error("JWT verification failed:", error.message);
     throw new Error("Unauthorized");
   }
 };
