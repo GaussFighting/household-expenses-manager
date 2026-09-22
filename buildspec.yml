@@ -40,11 +40,33 @@ phases:
 
             cd "lambdas/${LAMBDA_NAME}"
 
+            rm -f "${LAMBDA_NAME}.zip"
+
             if [ -d "node_modules" ]; then
-              zip -r "${LAMBDA_NAME}.zip" index.js package.json package-lock.json node_modules
+              echo "Packaging ${LAMBDA_NAME} with node_modules..."
+
+              zip -r "${LAMBDA_NAME}.zip" \
+                index.js \
+                package.json \
+                package-lock.json \
+                node_modules
+
+            elif [ -f "package.json" ]; then
+              echo "Packaging ${LAMBDA_NAME} with package.json..."
+
+              zip "${LAMBDA_NAME}.zip" \
+                index.js \
+                package.json
+
             else
-              zip -r "${LAMBDA_NAME}.zip" index.js
+              echo "Packaging ${LAMBDA_NAME} with index.js only..."
+
+              zip "${LAMBDA_NAME}.zip" \
+                index.js
             fi
+
+            echo "Contents of ${LAMBDA_NAME}.zip:"
+            unzip -l "${LAMBDA_NAME}.zip"
 
             aws lambda update-function-code \
               --function-name "${LAMBDA_NAME}" \
