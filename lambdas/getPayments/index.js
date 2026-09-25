@@ -8,7 +8,7 @@ const docClient = DynamoDBDocumentClient.from(client);
 export const handler = async (event) => {
   try {
     const params = {
-      TableName: "payment-types-develop",
+      TableName: "payments-develop",
     };
     const data = await docClient.send(new ScanCommand(params));
     console.log("data:", JSON.stringify(data));
