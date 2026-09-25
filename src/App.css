@@ -556,3 +556,31 @@
     padding: 18px;
   }
 }
+
+.pagination-section {
+  display: flex;
+  justify-content: center;
+  margin: 32px 0 24px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 8px;
+}
+
+.pagination-button {
+  min-width: 80px;
+}
+
+.pagination-page {
+  min-width: 70px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+}

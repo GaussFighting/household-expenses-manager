@@ -20,11 +20,17 @@ const Dashboard = () => {
   const [paymentTypes, setPaymentTypes] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-
   const [showForm, setShowForm] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [paymentCount, setPaymentCount] = useState(0);
+  const [nextToken, setNextToken] = useState(null);
+  const [pageTokens, setPageTokens] = useState([null]);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const PAGE_SIZE = 5;
+  const totalPages = Math.ceil(paymentCount / PAGE_SIZE);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -32,12 +38,14 @@ const Dashboard = () => {
         setLoading(true);
 
         const [paymentsData, paymentTypesData] = await Promise.all([
-          getPayments(),
+          getPayments(PAGE_SIZE),
           getPaymentTypes(),
         ]);
 
-        setPayments(paymentsData || []);
+        setPayments(paymentsData.items || []);
         setPaymentTypes(paymentTypesData || []);
+        setNextToken(paymentsData.nextToken || null);
+        setPaymentCount(paymentsData.count || 0);
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
         setError("Failed to load dashboard data");
@@ -49,6 +57,49 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
+  const handleNextPage = async () => {
+    if (!nextToken) {
+      return;
+    }
+    try {
+      setLoading(true);
+      setError("");
+
+      const paymentsData = await getPayments(PAGE_SIZE, nextToken);
+      setPageTokens((prev) => [...prev, nextToken]);
+
+      setPayments(paymentsData.items || []);
+      setNextToken(paymentsData.nextToken || null);
+      setPaymentCount(paymentsData.count || 0);
+      setCurrentPage((prev) => prev + 1);
+    } catch {
+      console.error("Failed to fetch next page", error);
+      setError("Failed to load next page");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePreviousPage = async () => {
+    if (currentPage === 1) {
+      return;
+    }
+    try {
+      setLoading(true);
+      setError("");
+      const previousPageToken = pageTokens[currentPage - 2];
+      const paymentsData = await getPayments(PAGE_SIZE, previousPageToken);
+
+      setPayments(paymentsData.items || []);
+      setNextToken(paymentsData.nextToken || null);
+      setCurrentPage((prev) => prev - 1);
+    } catch {
+      console.error("Failed to fetch previous page", error);
+      setError("Failed to load previous page");
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleInputChange = (event) => {
     const { name, value } = event.target;
 
@@ -68,7 +119,7 @@ const Dashboard = () => {
     setEditingPayment(payment);
 
     setForm({
-      dueDate: payment.dueDate || "",
+      dueDate: payment.dueDate ? payment.dueDate.slice(0, 10) : "",
       flatName: payment.flatName || "",
       notes: payment.notes || "",
       paymentType: payment.paymentType || "",
@@ -320,6 +371,29 @@ const Dashboard = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      </section>
+      <section className="pagination-section">
+        <div className="pagination">
+          <button
+            className="button button-secondary pagination-button"
+            onClick={handlePreviousPage}
+            disabled={currentPage === 1 || loading}
+          >
+            Previous
+          </button>
+
+          <span className="pagination-page">
+            Page {currentPage} of {totalPages}{" "}
+          </span>
+
+          <button
+            className="button button-secondary pagination-button"
+            onClick={handleNextPage}
+            disabled={!nextToken || loading}
+          >
+            Next
+          </button>
         </div>
       </section>
 

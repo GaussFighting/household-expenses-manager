@@ -56,8 +56,15 @@ export const login = async (username, password) => {
   return { success: false, error: "UNKNOWN_ERROR" };
 };
 
-export const getPayments = async () => {
-  const response = await fetch(`${API_URL}/payments`, {
+export const getPayments = async (limit = 5, nextToken = null) => {
+  const params = new URLSearchParams();
+
+  params.set("limit", limit);
+
+  if (nextToken) {
+    params.set("nextToken", nextToken);
+  }
+  const response = await fetch(`${API_URL}/payments?${params.toString()}`, {
     method: "GET",
     credentials: "include",
     headers: getHeaders(),
