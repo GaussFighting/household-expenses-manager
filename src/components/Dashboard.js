@@ -186,7 +186,7 @@ const Dashboard = () => {
       (type) => type.uuid === paymentTypeUuid,
     );
 
-    return paymentType?.name || paymentTypeUuid;
+    return paymentType?.paymentType || paymentTypeUuid;
   };
 
   const formatDate = (date) => {
@@ -273,7 +273,7 @@ const Dashboard = () => {
 
                 {paymentTypes.map((paymentType) => (
                   <option key={paymentType.uuid} value={paymentType.uuid}>
-                    {paymentType.name}
+                    {paymentType.paymentType}
                   </option>
                 ))}
               </select>
@@ -412,8 +412,8 @@ const Dashboard = () => {
             <tbody>
               {paymentTypes.map((paymentType) => (
                 <tr key={paymentType.uuid}>
-                  <td className="bold-cell">{paymentType.name}</td>
-                  <td>{paymentType.image}</td>
+                  <td className="bold-cell">{paymentType.paymentType}</td>
+                  <td>{paymentType.s3_img}</td>
                 </tr>
               ))}
             </tbody>
