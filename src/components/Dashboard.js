@@ -43,7 +43,7 @@ const Dashboard = () => {
         ]);
 
         setPayments(paymentsData.items || []);
-        setPaymentTypes(paymentTypesData || []);
+        setPaymentTypes(paymentTypesData.items || []);
         setNextToken(paymentsData.nextToken || null);
         setPaymentCount(paymentsData.count || 0);
       } catch (error) {
