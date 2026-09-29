@@ -109,8 +109,8 @@ export const createPayment = async (payment) => {
   return JSON.parse(text);
 };
 
-export const updatePayment = async (id, payment) => {
-  const response = await fetch(`${API_URL}/payments?id=${id}`, {
+export const updatePayment = async (uuid, payment) => {
+  const response = await fetch(`${API_URL}/payments?uuid=${uuid}`, {
     method: "PATCH",
     credentials: "include",
     headers: getHeaders(),
@@ -126,6 +126,7 @@ export const updatePayment = async (id, payment) => {
   }
 
   const text = await response.text();
+
   if (!text.trim()) {
     return "empty";
   }

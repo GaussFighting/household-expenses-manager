@@ -10,7 +10,7 @@ const docClient = DynamoDBDocumentClient.from(client);
 export const handler = async (event) => {
   try {
     console.log("EVENT:", JSON.stringify(event));
-    const body = event;
+    const body = JSON.parse(event.body || "{}");
     console.log("BODY:", JSON.stringify(body));
     const { dueDate, flatName, notes, paymentType, value } = body;
 
