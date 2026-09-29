@@ -5,6 +5,7 @@ import {
   createPayment,
   updatePayment,
   deletePayment,
+  getSumPayments,
 } from "../services/api";
 
 const emptyForm = {
@@ -28,6 +29,9 @@ const Dashboard = () => {
   const [nextToken, setNextToken] = useState(null);
   const [pageTokens, setPageTokens] = useState([null]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [paymentTypeSum, setPaymentTypeSum] = useState("");
+  const [paymentTypeSumValue, setPaymentTypeSumValue] = useState(null);
+  const [sumLoading, setSumLoading] = useState(false);
 
   const PAGE_SIZE = 5;
   const totalPages = Math.ceil(paymentCount / PAGE_SIZE);
@@ -195,6 +199,27 @@ const Dashboard = () => {
       month: "2-digit",
       year: "numeric",
     });
+  };
+
+  const handlePaymentTypeSumChange = async (event) => {
+    const paymentTypeUuid = event.target.value;
+
+    setPaymentTypeSum(paymentTypeUuid);
+    setPaymentTypeSumValue(null);
+
+    if (!paymentTypeUuid) {
+      return;
+    }
+    try {
+      setSumLoading(true);
+      const data = await getSumPayments(paymentTypeUuid);
+      setPaymentTypeSumValue(data.sum);
+    } catch (error) {
+      console.error("Failed to get payment type sum", error);
+      setError("Failed to calculate payment type sum");
+    } finally {
+      setSumLoading(false);
+    }
   };
 
   if (loading) {
@@ -396,6 +421,31 @@ const Dashboard = () => {
           </button>
         </div>
       </section>
+
+      <div className="form-group">
+        <label htmlFor="paymentTypeSum">Payment type sum</label>
+
+        <select
+          id="paymentTypeSum"
+          name="paymentTypeSum"
+          value={paymentTypeSum}
+          onChange={handlePaymentTypeSumChange}
+          required
+        >
+          <option value="">Select payment type</option>
+
+          {paymentTypes.map((paymentType) => (
+            <option key={paymentType.uuid} value={paymentType.uuid}>
+              {paymentType.paymentType}
+            </option>
+          ))}
+        </select>
+        {paymentTypeSum && (
+          <div>
+            Sum: {sumLoading ? "Calculating..." : (paymentTypeSumValue ?? "—")}
+          </div>
+        )}
+      </div>
 
       <section className="dashboard-section">
         <h2>Payment types</h2>

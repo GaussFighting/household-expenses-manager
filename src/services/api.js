@@ -178,3 +178,26 @@ export const getPaymentTypes = async () => {
   }
   return JSON.parse(text);
 };
+
+export const getSumPayments = async (byType) => {
+  const response = await fetch(`${API_URL}/payments/sum?byType=${byType}`, {
+    method: "GET",
+    credentials: "include",
+    headers: getHeaders(),
+  });
+  if (response.status === 401) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error("Failed to get sum payment");
+  }
+
+  const text = await response.text();
+
+  if (!text.trim()) {
+    return "empty";
+  }
+
+  return JSON.parse(text);
+};
