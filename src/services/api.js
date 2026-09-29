@@ -134,8 +134,8 @@ export const updatePayment = async (uuid, payment) => {
   return JSON.parse(text);
 };
 
-export const deletePayment = async (id) => {
-  const response = await fetch(`${API_URL}/payments?id=${id}`, {
+export const deletePayment = async (uuid) => {
+  const response = await fetch(`${API_URL}/payments?uuid=${uuid}`, {
     method: "DELETE",
     credentials: "include",
     headers: getHeaders(),
