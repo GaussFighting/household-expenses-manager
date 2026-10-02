@@ -1,7 +1,11 @@
 import { randomUUID } from "crypto";
 
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  GetCommand,
+} from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
 
@@ -14,11 +18,33 @@ export const handler = async (event) => {
     console.log("BODY:", JSON.stringify(body));
     const { dueDate, flatName, notes, paymentType, value } = body;
 
+    const paymentTypeResult = await docClient.send(
+      new GetCommand({
+        TableName: "payment-types",
+        Key: { uuid: paymentType },
+      }),
+    );
+
+    if (!paymentTypeResult.Item) {
+      return {
+        statusCode: 400,
+        headers: {
+          "Access-Control-Allow-Origin": "http://localhost:3000",
+          "Access-Control-Allow-Credentials": "true",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: "Invalid payment type",
+        }),
+      };
+    }
+
     const params = {
       TableName: "payments-develop",
       Item: {
         uuid: randomUUID(),
-        dueDate: `${dueDate}T00:00:00Z`,
+        paymentGroup: "ALL",
+        dueDate,
         flatName,
         notes,
         paymentType,

@@ -140,8 +140,15 @@ const Dashboard = () => {
       setSaving(true);
       setError("");
 
+      const payment = {
+        ...form,
+        dueDate: `${form.dueDate}T00:00:00Z`,
+      };
       if (editingPayment) {
-        const updatedPayment = await updatePayment(editingPayment.uuid, form);
+        const updatedPayment = await updatePayment(
+          editingPayment.uuid,
+          payment,
+        );
 
         setPayments((prev) =>
           prev.map((payment) =>
@@ -149,9 +156,9 @@ const Dashboard = () => {
           ),
         );
       } else {
-        const newPayment = await createPayment(form);
+        const newPayment = await createPayment(payment);
 
-        setPayments((prev) => [...prev, newPayment]);
+        setPayments((prev) => [...prev, newPayment.item]);
       }
 
       setForm(emptyForm);

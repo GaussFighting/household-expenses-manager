@@ -1,6 +1,10 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 
-import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  ScanCommand,
+  QueryCommand,
+} from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
 
@@ -21,6 +25,12 @@ export const handler = async (event) => {
 
     const params = {
       TableName: "payments-develop",
+      IndexName: "dueDate-index",
+      KeyConditionExpression: "paymentGroup = :paymentGroup",
+      ExpressionAttributeValues: {
+        ":paymentGroup": "ALL",
+      },
+      ScanIndexForward: false,
       Limit: limit,
     };
 
@@ -30,7 +40,7 @@ export const handler = async (event) => {
       );
     }
 
-    const data = await docClient.send(new ScanCommand(params));
+    const data = await docClient.send(new QueryCommand(params));
 
     console.log("data:", JSON.stringify(data));
 
