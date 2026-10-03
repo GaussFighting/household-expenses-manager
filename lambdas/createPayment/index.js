@@ -39,6 +39,8 @@ export const handler = async (event) => {
       };
     }
 
+    const numericValue = Number(value);
+
     const params = {
       TableName: "payments-develop",
       Item: {
@@ -48,7 +50,7 @@ export const handler = async (event) => {
         flatName,
         notes,
         paymentType,
-        value,
+        value: numericValue,
       },
     };
     await docClient.send(new PutCommand(params));

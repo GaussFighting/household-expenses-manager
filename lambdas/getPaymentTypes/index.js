@@ -7,6 +7,22 @@ const docClient = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event) => {
   try {
+    const queryParams = event.queryStringParameters || {};
+
+    if (Object.keys(queryParams).length > 0) {
+      return {
+        statusCode: 400,
+        headers: {
+          "Access-Control-Allow-Origin": "http://localhost:3000",
+          "Access-Control-Allow-Credentials": "true",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: "Query parameters are not allowed",
+        }),
+      };
+    }
+
     const params = {
       TableName: "payment-types-develop",
     };

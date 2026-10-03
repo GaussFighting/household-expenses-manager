@@ -142,6 +142,7 @@ const Dashboard = () => {
 
       const payment = {
         ...form,
+        value: Number(form.value),
         dueDate: `${form.dueDate}T00:00:00Z`,
       };
       if (editingPayment) {
@@ -156,9 +157,17 @@ const Dashboard = () => {
           ),
         );
       } else {
-        const newPayment = await createPayment(payment);
+        // const newPayment = await createPayment(payment);
+        // setPayments((prev) => [...prev, newPayment.item]);
 
-        setPayments((prev) => [...prev, newPayment.item]);
+        await createPayment(payment);
+        const paymentsData = await getPayments(PAGE_SIZE);
+
+        setPayments(paymentsData.items || []);
+        setNextToken(paymentsData.nextToken || null);
+        setPaymentCount(paymentsData.count || 0);
+        setCurrentPage(1);
+        setPageTokens([null]);
       }
 
       setForm(emptyForm);
