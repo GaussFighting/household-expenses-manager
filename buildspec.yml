@@ -36,64 +36,88 @@ phases:
           deploy_lambda() {
             LAMBDA_NAME=$1
 
+            echo "========================================"
             echo "Deploying ${LAMBDA_NAME} Lambda..."
+            echo "========================================"
 
-            cd "lambdas/${LAMBDA_NAME}"
+            LAMBDA_DIR="lambdas/${LAMBDA_NAME}"
+            STAGING_DIR="/tmp/${LAMBDA_NAME}"
+
+            # Wyczyść poprzedni staging
+            rm -rf "${STAGING_DIR}"
+
+            # Utwórz katalog tymczasowy
+            mkdir -p "${STAGING_DIR}"
+
+            # Skopiuj podstawowe pliki Lambdy
+            cp "${LAMBDA_DIR}/index.js" "${STAGING_DIR}/"
+
+            if [ -f "${LAMBDA_DIR}/package.json" ]; then
+              cp "${LAMBDA_DIR}/package.json" "${STAGING_DIR}/"
+            fi
+
+            if [ -f "${LAMBDA_DIR}/package-lock.json" ]; then
+              cp "${LAMBDA_DIR}/package-lock.json" "${STAGING_DIR}/"
+            fi
+
+            # Skopiuj node_modules, jeśli Lambda ich potrzebuje
+            if [ -d "${LAMBDA_DIR}/node_modules" ]; then
+              echo "Copying node_modules..."
+
+              cp -r \
+                "${LAMBDA_DIR}/node_modules" \
+                "${STAGING_DIR}/"
+            fi
+
+            # Sprawdź, czy Lambda korzysta ze wspólnego CORS utility
+            if grep -qE '\.\./utils/cors\.js' "${LAMBDA_DIR}/index.js"; then
+              echo "${LAMBDA_NAME} uses shared CORS utility"
+
+              # W ZIP-ie utils musi znajdować się obok index.js
+              mkdir -p "${STAGING_DIR}/utils"
+
+              cp \
+                "lambdas/utils/cors.js" \
+                "${STAGING_DIR}/utils/cors.js"
+
+              # W repo:
+              # ../utils/cors.js
+              #
+              # W ZIP:
+              # ./utils/cors.js
+              #
+              # Modyfikujemy tylko tymczasową kopię index.js.
+              sed -i \
+                's#\.\./utils/cors\.js#./utils/cors.js#g' \
+                "${STAGING_DIR}/index.js"
+            fi
+
+            # Utwórz ZIP
+            cd "${STAGING_DIR}"
 
             rm -f "${LAMBDA_NAME}.zip"
 
-            USES_CORS=false
+            echo "Creating ${LAMBDA_NAME}.zip..."
 
-            if grep -qE 'from ["'\'']../../utils/cors\.js["'\'']|require\(["'\'']../../utils/cors\.js["'\'']\)' index.js; then
-              USES_CORS=true
-              echo "${LAMBDA_NAME} uses shared CORS utility"
-
-              mkdir -p utils
-              cp ../../utils/cors.js utils/cors.js
-            fi
-
-            if [ -d "node_modules" ]; then
-              echo "Packaging ${LAMBDA_NAME} with node_modules..."
-
-              zip -r "${LAMBDA_NAME}.zip" \
-                index.js \
-                package.json \
-                package-lock.json \
-                node_modules
-
-            elif [ -f "package.json" ]; then
-              echo "Packaging ${LAMBDA_NAME} with package.json..."
-
-              zip "${LAMBDA_NAME}.zip" \
-                index.js \
-                package.json
-
-            else
-              echo "Packaging ${LAMBDA_NAME} with index.js only..."
-
-              zip "${LAMBDA_NAME}.zip" \
-                index.js
-            fi
-
-            if [ "$USES_CORS" = true ]; then
-              echo "Adding shared CORS utility to ${LAMBDA_NAME}.zip..."
-
-              zip "${LAMBDA_NAME}.zip" utils/cors.js
-
-              rm -rf utils
-            fi
+            zip -r "${LAMBDA_NAME}.zip" . \
+              -x "*.zip"
 
             echo "Contents of ${LAMBDA_NAME}.zip:"
             unzip -l "${LAMBDA_NAME}.zip"
 
+            # Deploy do AWS Lambda
             aws lambda update-function-code \
               --function-name "${LAMBDA_NAME}" \
               --zip-file "fileb://${LAMBDA_NAME}.zip" \
               --region eu-central-1 || exit 1
 
-            cd ../..
+            cd - > /dev/null
+
+            # Usuń staging
+            rm -rf "${STAGING_DIR}"
 
             echo "${LAMBDA_NAME} Lambda deployment completed"
+            echo ""
           }
 
           deploy_lambda ping
