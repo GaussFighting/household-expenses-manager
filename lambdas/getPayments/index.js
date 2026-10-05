@@ -6,37 +6,16 @@ import {
   QueryCommand,
 } from "@aws-sdk/lib-dynamodb";
 
+import { getCorsHeaders } from "../utils/cors.js";
+
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
 const ALLOWED_SORT_FIELDS = ["paymentType", "value", "notes", "flatName"];
 
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://d22lbbpxtf9zwk.cloudfront.net",
-];
-
 export const handler = async (event) => {
-  const origin = event.headers?.origin || event.headers?.Origin;
+  const corsHeaders = getCorsHeaders(event);
 
-  const corsHeaders = {
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Api-Key",
-    "Access-Control-Allow-Methods": "GET,OPTIONS",
-    "Content-Type": "application/json",
-  };
-
-  if (allowedOrigins.includes(origin)) {
-    corsHeaders["Access-Control-Allow-Origin"] = origin;
-  }
-
-  if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 204,
-      headers: corsHeaders,
-      body: "",
-    };
-  }
   try {
     const limit = Number(event?.queryStringParameters?.limit || 5);
 
@@ -51,6 +30,7 @@ export const handler = async (event) => {
       const invalidFields = sortBy.filter(
         (field) => !ALLOWED_SORT_FIELDS.includes(field),
       );
+
       if (invalidFields.length > 0) {
         return {
           statusCode: 400,
