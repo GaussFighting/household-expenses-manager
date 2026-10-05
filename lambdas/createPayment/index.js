@@ -1,5 +1,4 @@
 import { randomUUID } from "crypto";
-
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
   DynamoDBDocumentClient,
@@ -7,15 +6,22 @@ import {
   GetCommand,
 } from "@aws-sdk/lib-dynamodb";
 
+import { getCorsHeaders } from "../utils/cors.js";
+
 const client = new DynamoDBClient({});
 
 const docClient = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event) => {
+  const corsHeaders = getCorsHeaders(event);
+
   try {
     console.log("EVENT:", JSON.stringify(event));
+
     const body = JSON.parse(event.body || "{}");
+
     console.log("BODY:", JSON.stringify(body));
+
     const { dueDate, flatName, notes, paymentType, value } = body;
 
     const paymentTypeResult = await docClient.send(
@@ -28,11 +34,7 @@ export const handler = async (event) => {
     if (!paymentTypeResult.Item) {
       return {
         statusCode: 400,
-        headers: {
-          "Access-Control-Allow-Origin": "http://localhost:3000",
-          "Access-Control-Allow-Credentials": "true",
-          "Content-Type": "application/json",
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           message: "Invalid payment type",
         }),
@@ -53,15 +55,12 @@ export const handler = async (event) => {
         value: numericValue,
       },
     };
+
     await docClient.send(new PutCommand(params));
 
     return {
       statusCode: 201,
-      headers: {
-        "Access-Control-Allow-Origin": "http://localhost:3000",
-        "Access-Control-Allow-Credentials": "true",
-        "Content-Type": "application/json",
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         message: "Payment created successfully",
         item: params.Item,
@@ -72,11 +71,7 @@ export const handler = async (event) => {
 
     return {
       statusCode: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "http://localhost:3000",
-        "Access-Control-Allow-Credentials": "true",
-        "Content-Type": "application/json",
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         message: "Failed to create payment",
       }),

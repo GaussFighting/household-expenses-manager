@@ -1,21 +1,20 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import { getCorsHeaders } from "../utils/cors.js";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event) => {
+  const corsHeaders = getCorsHeaders(event);
+
   try {
     const uuid = event.queryStringParameters?.uuid;
 
     if (!uuid) {
       return {
         statusCode: 400,
-        headers: {
-          "Access-Control-Allow-Origin": "http://localhost:3000",
-          "Access-Control-Allow-Credentials": "true",
-          "Content-Type": "application/json",
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           message: "Missing payment uuid",
         }),
@@ -29,11 +28,7 @@ export const handler = async (event) => {
     );
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "http://localhost:3000",
-        "Access-Control-Allow-Credentials": "true",
-        "Content-Type": "application/json",
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         message: `Payment of ${uuid} deleted`,
         uuid: uuid,
@@ -43,11 +38,7 @@ export const handler = async (event) => {
     console.error("DynamoDB delete error:", error);
     return {
       statusCode: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "http://localhost:3000",
-        "Access-Control-Allow-Credentials": "true",
-        "Content-Type": "application/json",
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         message: "Invalid request",
       }),

@@ -1,20 +1,19 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import { getCorsHeaders } from "../utils/cors.js";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event) => {
+  const corsHeaders = getCorsHeaders(event);
+
   try {
     const byType = event.queryStringParameters?.byType;
     if (!byType) {
       return {
         statusCode: 400,
-        headers: {
-          "Access-Control-Allow-Origin": "http://localhost:3000",
-          "Access-Control-Allow-Credentials": "true",
-          "Content-Type": "application/json",
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           message: "Missing payment type",
         }),
@@ -36,11 +35,7 @@ export const handler = async (event) => {
     );
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "http://localhost:3000",
-        "Access-Control-Allow-Credentials": "true",
-        "Content-Type": "application/json",
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         paymentType: byType,
         sum,
@@ -51,11 +46,7 @@ export const handler = async (event) => {
 
     return {
       statusCode: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "http://localhost:3000",
-        "Access-Control-Allow-Credentials": "true",
-        "Content-Type": "application/json",
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         message: "Failed to calculate payments sum",
       }),

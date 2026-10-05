@@ -3,35 +3,15 @@ import {
   CognitoIdentityProviderClient,
   InitiateAuthCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
+import { getCorsHeaders } from "../utils/cors.js";
 
 const cognito = new CognitoIdentityProviderClient({
   region: process.env.AWS_REGION,
 });
 
 export const handler = async (event) => {
-  const allowedOrigins = [
-    "http://localhost:3000",
-    "https://d22lbbpxtf9zwk.cloudfront.net",
-  ];
+  const corsHeaders = getCorsHeaders(event);
 
-  const origin = event.headers?.origin || event.headers?.Origin;
-
-  const corsHeaders = {
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Api-Key",
-    "Access-Control-Allow-Methods": "POST,OPTIONS",
-  };
-
-  if (allowedOrigins.includes(origin)) {
-    corsHeaders["Access-Control-Allow-Origin"] = origin;
-  }
-  if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 204,
-      headers: corsHeaders,
-      body: "",
-    };
-  }
   try {
     console.log("LOGIN Lambda started");
 
@@ -54,10 +34,7 @@ export const handler = async (event) => {
 
       return {
         statusCode: 403,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           message: "Invalid credentials",
         }),

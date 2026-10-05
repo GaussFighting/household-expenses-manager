@@ -1,47 +1,5 @@
-// const allowedOrigins = [
-//   "http://localhost:3000",
-//   "https://d22lbbpxtf9zwk.cloudfront.net",
-// ];
-
-// export const handler = async (event) => {
-//   console.log("PING EVENT:", JSON.stringify(event));
-
-//   const origin = event.headers?.origin || event.headers?.Origin;
-
-//   const headers = {
-//     "Access-Control-Allow-Credentials": "true",
-//     "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Api-Key",
-//     "Access-Control-Allow-Methods": "GET,OPTIONS",
-//     "Content-Type": "application/json",
-//   };
-
-//   if (allowedOrigins.includes(origin)) {
-//     headers["Access-Control-Allow-Origin"] = origin;
-//   }
-
-//   if (event.httpMethod === "OPTIONS") {
-//     return {
-//       statusCode: 204,
-//       headers,
-//       body: "",
-//     };
-//   }
-
-//   return {
-//     statusCode: 200,
-//     headers,
-//     body: JSON.stringify({
-//       message: "pong",
-//     }),
-//   };
-// };
-
 import { CognitoJwtVerifier } from "aws-jwt-verify";
-
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://d22lbbpxtf9zwk.cloudfront.net",
-];
+import { getCorsHeaders } from "../utils/cors.js";
 
 const userPoolId = process.env.COGNITO_USER_POOL_ID;
 const clientId = process.env.COGNITO_CLIENT_ID;
@@ -53,29 +11,9 @@ const verifier = CognitoJwtVerifier.create({
 });
 
 export const handler = async (event) => {
+  const corsHeaders = getCorsHeaders(event);
+
   console.log("PING EVENT:", JSON.stringify(event));
-
-  const origin = event.headers?.origin || event.headers?.Origin;
-
-  const headers = {
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Headers": "Content-Type,Authorization,X-Api-Key",
-    "Access-Control-Allow-Methods": "GET,OPTIONS",
-    "Content-Type": "application/json",
-  };
-
-  if (allowedOrigins.includes(origin)) {
-    headers["Access-Control-Allow-Origin"] = origin;
-  }
-
-  // Preflight
-  if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 204,
-      headers,
-      body: "",
-    };
-  }
 
   try {
     const cookieHeader = event.headers?.Cookie || event.headers?.cookie;
@@ -85,7 +23,7 @@ export const handler = async (event) => {
     if (!cookieHeader) {
       return {
         statusCode: 401,
-        headers,
+        headers: corsHeaders,
         body: JSON.stringify({
           message: "Unauthorized",
         }),
@@ -103,7 +41,7 @@ export const handler = async (event) => {
     if (!accessTokenCookie) {
       return {
         statusCode: 401,
-        headers,
+        headers: corsHeaders,
         body: JSON.stringify({
           message: "Unauthorized",
         }),
@@ -117,7 +55,7 @@ export const handler = async (event) => {
     if (!accessToken) {
       return {
         statusCode: 401,
-        headers,
+        headers: corsHeaders,
         body: JSON.stringify({
           message: "Unauthorized",
         }),
@@ -130,7 +68,7 @@ export const handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers,
+      headers: corsHeaders,
       body: JSON.stringify({
         message: "pong",
       }),
@@ -140,7 +78,7 @@ export const handler = async (event) => {
 
     return {
       statusCode: 401,
-      headers,
+      headers: corsHeaders,
       body: JSON.stringify({
         message: "Unauthorized",
       }),

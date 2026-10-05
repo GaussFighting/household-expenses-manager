@@ -1,5 +1,6 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import { getCorsHeaders } from "../utils/cors.js";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -7,17 +8,15 @@ const docClient = DynamoDBDocumentClient.from(client);
 const allowFields = ["dueDate", "flatName", "notes", "paymentType", "value"];
 
 export const handler = async (event) => {
+  const corsHeaders = getCorsHeaders(event);
+
   try {
     const uuid = event.queryStringParameters?.uuid;
 
     if (!uuid) {
       return {
         statusCode: 400,
-        headers: {
-          "Access-Control-Allow-Origin": "http://localhost:3000",
-          "Access-Control-Allow-Credentials": "true",
-          "Content-Type": "application/json",
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           message: "Payment UUID is required",
         }),
@@ -33,6 +32,7 @@ export const handler = async (event) => {
     if (!updateFields.length) {
       return {
         statusCode: 400,
+        headers: corsHeaders,
         body: JSON.stringify({ message: "No valid fields to update" }),
       };
     }
@@ -63,11 +63,7 @@ export const handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: {
-        "Access-Control-Allow-Origin": "http://localhost:3000",
-        "Access-Control-Allow-Credentials": "true",
-        "Content-Type": "application/json",
-      },
+      headers: corsHeaders,
       body: JSON.stringify(data.Attributes),
     };
   } catch (error) {
@@ -75,11 +71,7 @@ export const handler = async (event) => {
 
     return {
       statusCode: 500,
-      headers: {
-        "Access-Control-Allow-Origin": "http://localhost:3000",
-        "Access-Control-Allow-Credentials": "true",
-        "Content-Type": "application/json",
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         message: "Failed to update payment",
       }),
