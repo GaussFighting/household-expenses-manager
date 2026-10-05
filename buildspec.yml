@@ -42,6 +42,16 @@ phases:
 
             rm -f "${LAMBDA_NAME}.zip"
 
+            USES_CORS=false
+
+            if grep -qE 'from ["'\'']../../utils/cors\.js["'\'']|require\(["'\'']../../utils/cors\.js["'\'']\)' index.js; then
+              USES_CORS=true
+              echo "${LAMBDA_NAME} uses shared CORS utility"
+
+              mkdir -p utils
+              cp ../../utils/cors.js utils/cors.js
+            fi
+
             if [ -d "node_modules" ]; then
               echo "Packaging ${LAMBDA_NAME} with node_modules..."
 
@@ -63,6 +73,14 @@ phases:
 
               zip "${LAMBDA_NAME}.zip" \
                 index.js
+            fi
+
+            if [ "$USES_CORS" = true ]; then
+              echo "Adding shared CORS utility to ${LAMBDA_NAME}.zip..."
+
+              zip "${LAMBDA_NAME}.zip" utils/cors.js
+
+              rm -rf utils
             fi
 
             echo "Contents of ${LAMBDA_NAME}.zip:"
