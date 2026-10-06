@@ -17,6 +17,7 @@ jest.mock(
       })),
     },
     QueryCommand: jest.fn(),
+    GetCommand: jest.fn(),
   }),
 
   { virtual: true },
@@ -47,10 +48,33 @@ test("returns 400 when queryStringParameters is missing", async () => {
   });
 });
 
-test("returns sum for payment type", async () => {
-  mockSend.mockResolvedValue({
-    Items: [{ value: "10" }, { value: "20" }, { value: "5" }],
+test("returns 400 when payment type does not exist", async () => {
+  mockSend.mockResolvedValueOnce({
+    Item: undefined,
   });
+
+  const response = await handler({
+    queryStringParameters: { byType: "abc123" },
+  });
+
+  expect(response.statusCode).toBe(400);
+
+  expect(JSON.parse(response.body)).toEqual({
+    message: "Invalid payment type",
+  });
+});
+
+test("returns sum for payment type", async () => {
+  mockSend
+    .mockResolvedValueOnce({
+      Item: {
+        uuid: "abc123",
+        paymentType: "Rent",
+      },
+    })
+    .mockResolvedValueOnce({
+      Items: [{ value: "10" }, { value: "20" }, { value: "5" }],
+    });
 
   const response = await handler({
     queryStringParameters: { byType: "abc123" },
