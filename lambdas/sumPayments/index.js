@@ -1,5 +1,9 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  QueryCommand,
+  GetCommand,
+} from "@aws-sdk/lib-dynamodb";
 import { getCorsHeaders } from "../utils/cors.js";
 
 const client = new DynamoDBClient({});
@@ -17,6 +21,21 @@ export const handler = async (event) => {
         body: JSON.stringify({
           message: "Missing payment type",
         }),
+      };
+    }
+
+    const paymentTypeResult = await docClient.send(
+      new GetCommand({
+        TableName: "payment-types",
+        Key: { uuid: byType },
+      }),
+    );
+
+    if (!paymentTypeResult.Item) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ message: "Invalid payment type" }),
       };
     }
     const data = await docClient.send(
