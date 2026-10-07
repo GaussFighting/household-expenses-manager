@@ -3,6 +3,12 @@ version: 0.2
 env:
   parameter-store:
     API_KEY: /${CODE_PIPELINE_NAME}/API_KEY
+    TABLE_PAYMENTS: /${CODE_PIPELINE_NAME}/TABLE_PAYMENTS
+    TABLE_PAYMENT_TYPES: /${CODE_PIPELINE_NAME}/TABLE_PAYMENT_TYPES
+    ALLOWED_ORIGINS: /${CODE_PIPELINE_NAME}/ALLOWED_ORIGINS
+    COGNITO_CLIENT_ID: /${CODE_PIPELINE_NAME}/COGNITO_CLIENT_ID
+    COGNITO_CLIENT_SECRET: /${CODE_PIPELINE_NAME}/COGNITO_CLIENT_SECRET
+    COGNITO_USER_POOL_ID: /${CODE_PIPELINE_NAME}/COGNITO_USER_POOL_ID
 
 phases:
   install:
@@ -27,11 +33,107 @@ phases:
   build:
     commands:
       - test -n "$API_KEY" && echo "API_KEY is set"
+      - test -n "$TABLE_PAYMENTS" && echo "TABLE_PAYMENTS is set"
+      - test -n "$TABLE_PAYMENT_TYPES" && echo "TABLE_PAYMENT_TYPES is set"
+      - test -n "$ALLOWED_ORIGINS" && echo "ALLOWED_ORIGINS is set"
+      - test -n "$COGNITO_CLIENT_ID" && echo "COGNITO_CLIENT_ID is set"
+      - test -n "$COGNITO_CLIENT_SECRET" && echo "COGNITO_CLIENT_SECRET is set"
+      - test -n "$COGNITO_USER_POOL_ID" && echo "COGNITO_USER_POOL_ID is set"
+
       - npm run build
 
       - |
         if [ "$CODE_PIPELINE_NAME" = "expenses-manager-develop" ]; then
           echo "Environment: develop"
+
+          set_lambda_environment() {
+            LAMBDA_NAME=$1
+
+            echo "Setting environment variables for ${LAMBDA_NAME}..."
+
+            case "${LAMBDA_NAME}" in
+
+              authoriser)
+                ENV_VARS="COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID},COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID}"
+                ;;
+
+              cors)
+                ENV_VARS="ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              createPayment)
+                ENV_VARS="TABLE_PAYMENT_TYPES=${TABLE_PAYMENT_TYPES},TABLE_PAYMENTS=${TABLE_PAYMENTS},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              createPaymentType)
+                ENV_VARS="TABLE_PAYMENT_TYPES=${TABLE_PAYMENT_TYPES},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              deletePayment)
+                ENV_VARS="TABLE_PAYMENTS=${TABLE_PAYMENTS},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              deletePaymentType)
+                ENV_VARS="TABLE_PAYMENT_TYPES=${TABLE_PAYMENT_TYPES},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              getExtras)
+                ENV_VARS="TABLE_PAYMENT_TYPES=${TABLE_PAYMENT_TYPES},TABLE_PAYMENTS=${TABLE_PAYMENTS},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              getPayment)
+                ENV_VARS="TABLE_PAYMENT_TYPES=${TABLE_PAYMENT_TYPES},TABLE_PAYMENTS=${TABLE_PAYMENTS},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              getPayments)
+                ENV_VARS="TABLE_PAYMENTS=${TABLE_PAYMENTS},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              getPaymentType)
+                ENV_VARS="TABLE_PAYMENT_TYPES=${TABLE_PAYMENT_TYPES},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              getPaymentTypes)
+                ENV_VARS="TABLE_PAYMENT_TYPES=${TABLE_PAYMENT_TYPES},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              login)
+                ENV_VARS="ALLOWED_ORIGINS=${ALLOWED_ORIGINS},COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID},COGNITO_CLIENT_SECRET=${COGNITO_CLIENT_SECRET}"
+                ;;
+
+              ping)
+                ENV_VARS="COGNITO_CLIENT_ID=${COGNITO_CLIENT_ID},COGNITO_USER_POOL_ID=${COGNITO_USER_POOL_ID},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              sumPayments)
+                ENV_VARS="TABLE_PAYMENT_TYPES=${TABLE_PAYMENT_TYPES},TABLE_PAYMENTS=${TABLE_PAYMENTS},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              updatePayment)
+                ENV_VARS="ALLOWED_ORIGINS=${ALLOWED_ORIGINS},TABLE_PAYMENTS=${TABLE_PAYMENTS}"
+                ;;
+
+              updatePaymentType)
+                ENV_VARS="TABLE_PAYMENT_TYPES=${TABLE_PAYMENT_TYPES},ALLOWED_ORIGINS=${ALLOWED_ORIGINS}"
+                ;;
+
+              callReminder|checkNotifications)
+                echo "No environment variables required for ${LAMBDA_NAME}"
+                return 0
+                ;;
+
+              *)
+                echo "ERROR: No environment configuration defined for ${LAMBDA_NAME}"
+                exit 1
+                ;;
+
+            esac
+
+            aws lambda update-function-configuration \
+              --function-name "${LAMBDA_NAME}" \
+              --environment "Variables={${ENV_VARS}}" \
+              --region eu-central-1 || exit 1
+          }
 
           deploy_lambda() {
             LAMBDA_NAME=$1
@@ -43,13 +145,13 @@ phases:
             LAMBDA_DIR="lambdas/${LAMBDA_NAME}"
             STAGING_DIR="/tmp/${LAMBDA_NAME}"
 
-            # Wyczyść poprzedni staging
+            # Clean last staging
             rm -rf "${STAGING_DIR}"
 
-            # Utwórz katalog tymczasowy
+            # Create temporary folder
             mkdir -p "${STAGING_DIR}"
 
-            # Skopiuj podstawowe pliki Lambdy
+            # Copy Lambda basic files
             cp "${LAMBDA_DIR}/index.js" "${STAGING_DIR}/"
 
             if [ -f "${LAMBDA_DIR}/package.json" ]; then
@@ -60,7 +162,7 @@ phases:
               cp "${LAMBDA_DIR}/package-lock.json" "${STAGING_DIR}/"
             fi
 
-            # Skopiuj node_modules, jeśli Lambda ich potrzebuje
+            # Copy node_modules if necessery 
             if [ -d "${LAMBDA_DIR}/node_modules" ]; then
               echo "Copying node_modules..."
 
@@ -69,30 +171,30 @@ phases:
                 "${STAGING_DIR}/"
             fi
 
-            # Sprawdź, czy Lambda korzysta ze wspólnego CORS utility
+            # Check if Lambda need CORS utils 
             if grep -qE '\.\./utils/cors\.js' "${LAMBDA_DIR}/index.js"; then
               echo "${LAMBDA_NAME} uses shared CORS utility"
 
-              # W ZIP-ie utils musi znajdować się obok index.js
+              # In Zip. move utils close to index.js 
               mkdir -p "${STAGING_DIR}/utils"
 
               cp \
                 "lambdas/utils/cors.js" \
                 "${STAGING_DIR}/utils/cors.js"
 
-              # W repo:
+              # In Repo:
               # ../utils/cors.js
               #
-              # W ZIP:
+              # In Zup:
               # ./utils/cors.js
               #
-              # Modyfikujemy tylko tymczasową kopię index.js.
+              # Modify temporary copy index.js.
               sed -i \
                 's#\.\./utils/cors\.js#./utils/cors.js#g' \
                 "${STAGING_DIR}/index.js"
             fi
 
-            # Utwórz ZIP
+            # Create ZIP
             cd "${STAGING_DIR}"
 
             rm -f "${LAMBDA_NAME}.zip"
@@ -105,15 +207,23 @@ phases:
             echo "Contents of ${LAMBDA_NAME}.zip:"
             unzip -l "${LAMBDA_NAME}.zip"
 
-            # Deploy do AWS Lambda
+            # Deploy to AWS Lambda
             aws lambda update-function-code \
               --function-name "${LAMBDA_NAME}" \
               --zip-file "fileb://${LAMBDA_NAME}.zip" \
               --region eu-central-1 || exit 1
 
+            # Wait for function update
+            aws lambda wait function-updated \
+              --function-name "${LAMBDA_NAME}" \
+              --region eu-central-1 || exit 1
+
+            # Set ENV for develop
+            set_lambda_environment "${LAMBDA_NAME}"
+
             cd - > /dev/null
 
-            # Usuń staging
+            # Delete staging
             rm -rf "${STAGING_DIR}"
 
             echo "${LAMBDA_NAME} Lambda deployment completed"
@@ -135,6 +245,9 @@ phases:
           deploy_lambda authoriser
           deploy_lambda updatePaymentType
           deploy_lambda getPayments
+          deploy_lambda cors
+          deploy_lambda callReminder
+          deploy_lambda checkNotifications
 
         else
           echo "Environment: production"

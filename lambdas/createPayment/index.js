@@ -26,7 +26,7 @@ export const handler = async (event) => {
 
     const paymentTypeResult = await docClient.send(
       new GetCommand({
-        TableName: "payment-types",
+        TableName: process.env.TABLE_PAYMENT_TYPES,
         Key: { uuid: paymentType },
       }),
     );
@@ -44,7 +44,7 @@ export const handler = async (event) => {
     const numericValue = Number(value);
 
     const params = {
-      TableName: "payments-develop",
+      TableName: process.env.TABLE_PAYMENTS,
       Item: {
         uuid: randomUUID(),
         paymentGroup: "ALL",
