@@ -1,4 +1,13 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  DeleteCommand,
+  GetCommand,
+} from "@aws-sdk/lib-dynamodb";
 import { getCorsHeaders } from "../utils/cors.js";
+
+const client = new DynamoDBClient({});
+const docClient = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event) => {
   const corsHeaders = getCorsHeaders(event);
@@ -21,10 +30,56 @@ export const handler = async (event) => {
     };
   }
 
-  const response = {
-    statusCode: 200,
-    headers: corsHeaders,
-    body: JSON.stringify("Hello from Lambda! deletePaymentType"),
-  };
-  return response;
+  try {
+    const uuid = event.queryStringParameters?.uuid;
+
+    if (!uuid) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          message: "Missing payment uuid",
+        }),
+      };
+    }
+
+    const paymentUuidExist = await docClient.send(
+      new GetCommand({
+        TableName: "payment-types-develop",
+        Key: { uuid: uuid },
+      }),
+    );
+    if (!paymentUuidExist.Item) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          message: "Invalid payment type uuid",
+        }),
+      };
+    }
+    await docClient.send(
+      new DeleteCommand({
+        TableName: "payment-types-develop",
+        Key: { uuid },
+      }),
+    );
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        message: `Payment type of ${uuid} deleted`,
+        uuid: uuid,
+      }),
+    };
+  } catch (error) {
+    console.error("DynamoDB delete error:", error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        message: "Invalid request",
+      }),
+    };
+  }
 };

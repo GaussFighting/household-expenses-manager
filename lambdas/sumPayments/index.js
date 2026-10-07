@@ -26,7 +26,7 @@ export const handler = async (event) => {
 
     const paymentTypeResult = await docClient.send(
       new GetCommand({
-        TableName: "payment-types",
+        TableName: "payment-types-develop",
         Key: { uuid: byType },
       }),
     );

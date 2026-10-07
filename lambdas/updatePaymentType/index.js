@@ -30,7 +30,7 @@ export const handler = async (event) => {
         statusCode: 400,
         headers: corsHeaders,
         body: JSON.stringify({
-          message: "Payment UUID is required",
+          message: "Payment type UUID is required",
         }),
       };
     }
