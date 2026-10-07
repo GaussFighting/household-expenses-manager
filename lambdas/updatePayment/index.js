@@ -1,5 +1,9 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  UpdateCommand,
+  GetCommand,
+} from "@aws-sdk/lib-dynamodb";
 import { getCorsHeaders } from "../utils/cors.js";
 
 const client = new DynamoDBClient({});
@@ -23,7 +27,23 @@ export const handler = async (event) => {
       };
     }
 
-    const body = JSON.parse(event.body || {});
+    const paymentUuidExist = await docClient.send(
+      new GetCommand({
+        TableName: "payments-develop",
+        Key: { uuid: uuid },
+      }),
+    );
+
+    if (!paymentUuidExist.Item) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          message: "Invalid payment uuid",
+        }),
+      };
+    }
+    const body = JSON.parse(event.body || "{}");
 
     const updateFields = Object.keys(body).filter((field) =>
       allowFields.includes(field),
@@ -44,7 +64,8 @@ export const handler = async (event) => {
 
     updateFields.forEach((field) => {
       expressionAttributeNames[`#${field}`] = field;
-      expressionAttributeValues[`:${field}`] = body[field];
+      expressionAttributeValues[`:${field}`] =
+        field === "value" ? Number(body[field]) : body[field];
     });
 
     const data = await docClient.send(

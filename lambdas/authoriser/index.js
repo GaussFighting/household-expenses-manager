@@ -66,6 +66,8 @@ export const handler = async (event) => {
     console.log("Authorizer principalId:", payload.sub);
     console.log("Returning Allow policy");
 
+    const groups = payload["cognito:groups"] || [];
+
     const resource = `${apiArn}/${stage}/*/*`;
     return {
       principalId: payload.sub,
@@ -78,6 +80,9 @@ export const handler = async (event) => {
             Resource: resource,
           },
         ],
+      },
+      context: {
+        groups: JSON.stringify(groups),
       },
     };
   } catch (error) {

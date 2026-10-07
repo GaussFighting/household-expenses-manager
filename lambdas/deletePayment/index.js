@@ -1,5 +1,9 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import {
+  DynamoDBDocumentClient,
+  DeleteCommand,
+  GetCommand,
+} from "@aws-sdk/lib-dynamodb";
 import { getCorsHeaders } from "../utils/cors.js";
 
 const client = new DynamoDBClient({});
@@ -20,6 +24,23 @@ export const handler = async (event) => {
         }),
       };
     }
+    const paymentUuidExist = await docClient.send(
+      new GetCommand({
+        TableName: "payments-develop",
+        Key: { uuid: uuid },
+      }),
+    );
+
+    if (!paymentUuidExist.Item) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          message: "Invalid payment uuid",
+        }),
+      };
+    }
+
     await docClient.send(
       new DeleteCommand({
         TableName: "payments-develop",
