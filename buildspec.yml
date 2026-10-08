@@ -3,6 +3,12 @@ version: 0.2
 env:
   parameter-store:
     API_KEY: /${CODE_PIPELINE_NAME}/API_KEY
+    TABLE_PAYMENTS: /${CODE_PIPELINE_NAME}/TABLE_PAYMENTS
+    TABLE_PAYMENT_TYPES: /${CODE_PIPELINE_NAME}/TABLE_PAYMENT_TYPES
+    ALLOWED_ORIGINS: /${CODE_PIPELINE_NAME}/ALLOWED_ORIGINS
+    COGNITO_CLIENT_ID: /${CODE_PIPELINE_NAME}/COGNITO_CLIENT_ID
+    COGNITO_CLIENT_SECRET: /${CODE_PIPELINE_NAME}/COGNITO_CLIENT_SECRET
+    COGNITO_USER_POOL_ID: /${CODE_PIPELINE_NAME}/COGNITO_USER_POOL_ID
 
 phases:
   install:
@@ -12,7 +18,12 @@ phases:
       - |
         if [ "$CODE_PIPELINE_NAME" = "expenses-manager-develop" ]; then
           echo "Installing Lambda dependencies..."
+
           cd lambdas/login
+          npm ci
+          cd ../..
+
+          cd lambdas/authoriser
           npm ci
           cd ../..
         else
@@ -22,22 +33,290 @@ phases:
   build:
     commands:
       - test -n "$API_KEY" && echo "API_KEY is set"
+      - test -n "$TABLE_PAYMENTS" && echo "TABLE_PAYMENTS is set"
+      - test -n "$TABLE_PAYMENT_TYPES" && echo "TABLE_PAYMENT_TYPES is set"
+      - test -n "$ALLOWED_ORIGINS" && echo "ALLOWED_ORIGINS is set"
+      - test -n "$COGNITO_CLIENT_ID" && echo "COGNITO_CLIENT_ID is set"
+      - test -n "$COGNITO_CLIENT_SECRET" && echo "COGNITO_CLIENT_SECRET is set"
+      - test -n "$COGNITO_USER_POOL_ID" && echo "COGNITO_USER_POOL_ID is set"
+
       - npm run build
 
       - |
         if [ "$CODE_PIPELINE_NAME" = "expenses-manager-develop" ]; then
           echo "Environment: develop"
-          echo "Deploying login Lambda..."
 
-          cd lambdas/login
-          zip -r login.zip index.js package.json node_modules
-          aws lambda update-function-code \
-            --function-name login \
-            --zip-file fileb://login.zip \
-            --region eu-central-1
+          set_lambda_environment() {
+            LAMBDA_NAME=$1
 
-          cd ../..
-          echo "Login Lambda deployment completed"
+            echo "========================================"
+            echo "Setting environment variables for ${LAMBDA_NAME}..."
+            echo "========================================"
+
+            ENV_JSON=""
+
+            case "${LAMBDA_NAME}" in
+
+              authoriser)
+                ENV_JSON=$(printf '{"Variables":{"COGNITO_USER_POOL_ID":"%s","COGNITO_CLIENT_ID":"%s"}}' \
+                  "$COGNITO_USER_POOL_ID" \
+                  "$COGNITO_CLIENT_ID")
+                ;;
+
+              cors)
+                ENV_JSON=$(printf '{"Variables":{"ALLOWED_ORIGINS":"%s"}}' \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              createPayment)
+                ENV_JSON=$(printf '{"Variables":{"TABLE_PAYMENT_TYPES":"%s","TABLE_PAYMENTS":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$TABLE_PAYMENT_TYPES" \
+                  "$TABLE_PAYMENTS" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              createPaymentType)
+                ENV_JSON=$(printf '{"Variables":{"TABLE_PAYMENT_TYPES":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$TABLE_PAYMENT_TYPES" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              deletePayment)
+                ENV_JSON=$(printf '{"Variables":{"TABLE_PAYMENTS":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$TABLE_PAYMENTS" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              deletePaymentType)
+                ENV_JSON=$(printf '{"Variables":{"TABLE_PAYMENT_TYPES":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$TABLE_PAYMENT_TYPES" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              getExtras)
+                ENV_JSON=$(printf '{"Variables":{"TABLE_PAYMENT_TYPES":"%s","TABLE_PAYMENTS":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$TABLE_PAYMENT_TYPES" \
+                  "$TABLE_PAYMENTS" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              getPayment)
+                ENV_JSON=$(printf '{"Variables":{"TABLE_PAYMENT_TYPES":"%s","TABLE_PAYMENTS":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$TABLE_PAYMENT_TYPES" \
+                  "$TABLE_PAYMENTS" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              getPayments)
+                ENV_JSON=$(printf '{"Variables":{"TABLE_PAYMENTS":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$TABLE_PAYMENTS" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              getPaymentType)
+                ENV_JSON=$(printf '{"Variables":{"TABLE_PAYMENT_TYPES":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$TABLE_PAYMENT_TYPES" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              getPaymentTypes)
+                ENV_JSON=$(printf '{"Variables":{"TABLE_PAYMENT_TYPES":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$TABLE_PAYMENT_TYPES" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              login)
+                ENV_JSON=$(printf '{"Variables":{"ALLOWED_ORIGINS":"%s","COGNITO_CLIENT_ID":"%s","COGNITO_CLIENT_SECRET":"%s"}}' \
+                  "$ALLOWED_ORIGINS" \
+                  "$COGNITO_CLIENT_ID" \
+                  "$COGNITO_CLIENT_SECRET")
+                ;;
+
+              ping)
+                ENV_JSON=$(printf '{"Variables":{"COGNITO_CLIENT_ID":"%s","COGNITO_USER_POOL_ID":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$COGNITO_CLIENT_ID" \
+                  "$COGNITO_USER_POOL_ID" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              sumPayments)
+                ENV_JSON=$(printf '{"Variables":{"TABLE_PAYMENT_TYPES":"%s","TABLE_PAYMENTS":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$TABLE_PAYMENT_TYPES" \
+                  "$TABLE_PAYMENTS" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              updatePayment)
+                ENV_JSON=$(printf '{"Variables":{"ALLOWED_ORIGINS":"%s","TABLE_PAYMENTS":"%s"}}' \
+                  "$ALLOWED_ORIGINS" \
+                  "$TABLE_PAYMENTS")
+                ;;
+
+              updatePaymentType)
+                ENV_JSON=$(printf '{"Variables":{"TABLE_PAYMENT_TYPES":"%s","ALLOWED_ORIGINS":"%s"}}' \
+                  "$TABLE_PAYMENT_TYPES" \
+                  "$ALLOWED_ORIGINS")
+                ;;
+
+              callReminder|checkNotifications)
+                echo "No environment variables required for ${LAMBDA_NAME}"
+                return 0
+                ;;
+
+              *)
+                echo "ERROR: No environment configuration defined for ${LAMBDA_NAME}"
+                exit 1
+                ;;
+
+            esac
+
+            echo "Updating environment for ${LAMBDA_NAME}..."
+
+            if ! aws lambda update-function-configuration \
+              --function-name "${LAMBDA_NAME}" \
+              --environment "${ENV_JSON}" \
+              --region eu-central-1; then
+
+              echo "ERROR: Failed to update environment for ${LAMBDA_NAME}"
+              exit 1
+            fi
+
+            echo "Environment variables updated for ${LAMBDA_NAME}"
+          }
+
+          deploy_lambda() {
+            LAMBDA_NAME=$1
+
+            echo "========================================"
+            echo "Deploying ${LAMBDA_NAME} Lambda..."
+            echo "========================================"
+
+            LAMBDA_DIR="lambdas/${LAMBDA_NAME}"
+            STAGING_DIR="/tmp/${LAMBDA_NAME}"
+
+            # Clean last staging
+            rm -rf "${STAGING_DIR}"
+
+            # Create temporary folder
+            mkdir -p "${STAGING_DIR}"
+
+            # Copy Lambda basic files
+            cp "${LAMBDA_DIR}/index.js" "${STAGING_DIR}/"
+
+            if [ -f "${LAMBDA_DIR}/package.json" ]; then
+              cp "${LAMBDA_DIR}/package.json" "${STAGING_DIR}/"
+            fi
+
+            if [ -f "${LAMBDA_DIR}/package-lock.json" ]; then
+              cp "${LAMBDA_DIR}/package-lock.json" "${STAGING_DIR}/"
+            fi
+
+            # Copy node_modules if necessary
+            if [ -d "${LAMBDA_DIR}/node_modules" ]; then
+              echo "Copying node_modules..."
+
+              cp -r \
+                "${LAMBDA_DIR}/node_modules" \
+                "${STAGING_DIR}/"
+            fi
+
+            # Check if Lambda needs CORS utils
+            if grep -qE '\.\./utils/cors\.js' "${LAMBDA_DIR}/index.js"; then
+              echo "${LAMBDA_NAME} uses shared CORS utility"
+
+              # In ZIP move utils close to index.js
+              mkdir -p "${STAGING_DIR}/utils"
+
+              cp \
+                "lambdas/utils/cors.js" \
+                "${STAGING_DIR}/utils/cors.js"
+
+              # In repo:
+              # ../utils/cors.js
+              #
+              # In ZIP:
+              # ./utils/cors.js
+
+              sed -i \
+                's#\.\./utils/cors\.js#./utils/cors.js#g' \
+                "${STAGING_DIR}/index.js"
+            fi
+
+            # Create ZIP
+            cd "${STAGING_DIR}"
+
+            rm -f "${LAMBDA_NAME}.zip"
+
+            echo "Creating ${LAMBDA_NAME}.zip..."
+
+            if ! zip -r "${LAMBDA_NAME}.zip" . -x "*.zip"; then
+              echo "ERROR: Failed to create ${LAMBDA_NAME}.zip"
+              exit 1
+            fi
+
+            echo "Contents of ${LAMBDA_NAME}.zip:"
+            unzip -l "${LAMBDA_NAME}.zip"
+
+            # Deploy Lambda code
+            echo "Uploading ${LAMBDA_NAME} code to AWS Lambda..."
+
+            if ! aws lambda update-function-code \
+              --function-name "${LAMBDA_NAME}" \
+              --zip-file "fileb://${LAMBDA_NAME}.zip" \
+              --region eu-central-1; then
+
+              echo "ERROR: Failed to update code for ${LAMBDA_NAME}"
+              exit 1
+            fi
+
+            echo "Lambda code uploaded successfully."
+
+            # Wait for function update
+            echo "Waiting for ${LAMBDA_NAME} Lambda update..."
+
+            if ! aws lambda wait function-updated \
+              --function-name "${LAMBDA_NAME}" \
+              --region eu-central-1; then
+
+              echo "ERROR: Lambda update wait failed for ${LAMBDA_NAME}"
+              exit 1
+            fi
+
+            echo "Lambda code update completed."
+
+            # Set environment for develop
+            set_lambda_environment "${LAMBDA_NAME}"
+
+            cd - > /dev/null
+
+            # Delete staging
+            rm -rf "${STAGING_DIR}"
+
+            echo "========================================"
+            echo "${LAMBDA_NAME} Lambda deployment completed"
+            echo "========================================"
+            echo ""
+          }
+
+          deploy_lambda ping
+          deploy_lambda getPayment
+          deploy_lambda getPaymentTypes
+          deploy_lambda sumPayments
+          deploy_lambda updatePayment
+          deploy_lambda createPaymentType
+          deploy_lambda deletePaymentType
+          deploy_lambda deletePayment
+          deploy_lambda login
+          deploy_lambda createPayment
+          deploy_lambda getPaymentType
+          deploy_lambda getExtras
+          deploy_lambda authoriser
+          deploy_lambda updatePaymentType
+          deploy_lambda getPayments
+          deploy_lambda cors
+          deploy_lambda callReminder
+          deploy_lambda checkNotifications
+
         else
           echo "Environment: production"
           echo "Skipping Lambda deployment"
@@ -47,3 +326,4 @@ artifacts:
   base-directory: build
   files:
     - "**/*"
+
