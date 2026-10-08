@@ -4,7 +4,7 @@ import {
   UpdateCommand,
   GetCommand,
 } from "@aws-sdk/lib-dynamodb";
-import { getCorsHeaders } from "./utils/cors.js";
+import { getCorsHeaders } from "../utils/cors.js";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -36,7 +36,7 @@ export const handler = async (event) => {
     }
     const paymentUuidExist = await docClient.send(
       new GetCommand({
-        TableName: "payment-types-develop",
+        TableName: process.env.TABLE_PAYMENT_TYPES,
         Key: { uuid: uuid },
       }),
     );
@@ -77,7 +77,7 @@ export const handler = async (event) => {
 
     const data = await docClient.send(
       new UpdateCommand({
-        TableName: "payment-types-develop",
+        TableName: process.env.TABLE_PAYMENT_TYPES,
 
         Key: {
           uuid,

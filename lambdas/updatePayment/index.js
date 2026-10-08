@@ -29,7 +29,7 @@ export const handler = async (event) => {
 
     const paymentUuidExist = await docClient.send(
       new GetCommand({
-        TableName: "payments-develop",
+        TableName: process.env.TABLE_PAYMENTS,
         Key: { uuid: uuid },
       }),
     );
@@ -70,7 +70,7 @@ export const handler = async (event) => {
 
     const data = await docClient.send(
       new UpdateCommand({
-        TableName: "payments-develop",
+        TableName: process.env.TABLE_PAYMENTS,
 
         Key: {
           uuid,

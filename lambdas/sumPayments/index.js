@@ -26,7 +26,7 @@ export const handler = async (event) => {
 
     const paymentTypeResult = await docClient.send(
       new GetCommand({
-        TableName: "payment-types-develop",
+        TableName: process.env.TABLE_PAYMENT_TYPES,
         Key: { uuid: byType },
       }),
     );
@@ -40,7 +40,7 @@ export const handler = async (event) => {
     }
     const data = await docClient.send(
       new QueryCommand({
-        TableName: "payments-develop",
+        TableName: process.env.TABLE_PAYMENTS,
         IndexName: "paymentType-index",
         KeyConditionExpression: "paymentType = :paymentType",
         ExpressionAttributeValues: {

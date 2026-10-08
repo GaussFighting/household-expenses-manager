@@ -1,7 +1,7 @@
-const allowedOrigins = [
-  "http://localhost:3000",
-  "https://d22lbbpxtf9zwk.cloudfront.net",
-];
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 export const getCorsHeaders = (event) => {
   const origin = event.headers?.origin || event.headers?.Origin;

@@ -45,13 +45,13 @@ export const handler = async (event) => {
 
     const countData = await docClient.send(
       new ScanCommand({
-        TableName: "payments-develop",
+        TableName: process.env.TABLE_PAYMENTS,
         Select: "COUNT",
       }),
     );
 
     const params = {
-      TableName: "payments-develop",
+      TableName: process.env.TABLE_PAYMENTS,
       IndexName: "dueDate-index",
       KeyConditionExpression: "paymentGroup = :paymentGroup",
       ExpressionAttributeValues: {

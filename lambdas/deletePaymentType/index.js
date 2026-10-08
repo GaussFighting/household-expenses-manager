@@ -45,7 +45,7 @@ export const handler = async (event) => {
 
     const paymentUuidExist = await docClient.send(
       new GetCommand({
-        TableName: "payment-types-develop",
+        TableName: process.env.TABLE_PAYMENT_TYPES,
         Key: { uuid: uuid },
       }),
     );
@@ -60,7 +60,7 @@ export const handler = async (event) => {
     }
     await docClient.send(
       new DeleteCommand({
-        TableName: "payment-types-develop",
+        TableName: process.env.TABLE_PAYMENT_TYPES,
         Key: { uuid },
       }),
     );

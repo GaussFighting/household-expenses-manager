@@ -22,7 +22,7 @@ export const handler = async (event) => {
     }
 
     const params = {
-      TableName: "payment-types-develop",
+      TableName: process.env.TABLE_PAYMENT_TYPES,
     };
 
     const data = await docClient.send(new ScanCommand(params));
