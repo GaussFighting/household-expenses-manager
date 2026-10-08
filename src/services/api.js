@@ -1,6 +1,8 @@
-const API_URL =
-  "https://pfawuqu0j2.execute-api.eu-central-1.amazonaws.com/develop";
+const API_URL = process.env.REACT_APP_API_URL;
 
+if (!API_URL) {
+  throw new Error("REACT_APP_API_URL is not configured");
+}
 const xApiKey = process.env.REACT_APP_API_KEY;
 
 const getHeaders = () => {

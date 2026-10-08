@@ -24,7 +24,7 @@ export const handler = async (event) => {
     const body = JSON.parse(event.body || {});
     const { paymentType, s3_img } = body;
     const params = {
-      TableName: "payment-types-develop",
+      TableName: process.env.TABLE_PAYMENT_TYPES,
       Item: {
         uuid: randomUUID(),
         paymentType,
