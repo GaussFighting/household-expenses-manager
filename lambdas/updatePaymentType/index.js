@@ -9,7 +9,7 @@ import { getCorsHeaders } from "../utils/cors.js";
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
-const allowFields = ["paymentType", "s3name"];
+const allowFields = ["paymentType", "s3_img"];
 
 export const handler = async (event) => {
   const corsHeaders = getCorsHeaders(event);
